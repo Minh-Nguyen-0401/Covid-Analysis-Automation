@@ -10,17 +10,26 @@ import requests
 import pandas as pd
 from time import sleep
 
+
 def download_file(url, file_path, max_retries=5, backoff_factor=1):
     for attempt in range(max_retries):
         try:
             response = requests.get(url, stream=True)
             response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
-            
+
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded_size = 0
+            block_size = 8192  # 8 Kibibytes
+
             with open(file_path, 'wb') as file:
-                for chunk in response.iter_content(chunk_size=8192):
-                    file.write(chunk)
+                for chunk in response.iter_content(chunk_size=block_size):
+                    if chunk:
+                        file.write(chunk)
+                        downloaded_size += len(chunk)
+                        progress_percentage = (downloaded_size / total_size) * 100
+                        print(f"\rDownloading: {progress_percentage:.2f}%", end='')
             
-            print("Download successful")
+            print("\nDownload successful")
             return file_path
         
         except (requests.exceptions.RequestException, IOError) as e:
@@ -58,81 +67,83 @@ conn = pyodbc.connect('Driver={MySQL ODBC 8.4 Unicode Driver};'
                       'OPT_LOCAL_INFILE=1;') 
 cursor = conn.cursor()
 
-drop_table = '''
-DROP TABLE IF EXISTS `covid_data`;
-'''
+# drop_table = '''
+# DROP TABLE IF EXISTS `covid_data`;
+# '''
 
-create_table = '''
-CREATE TABLE `covid_data` (
-  `iso_code` VARCHAR(255) DEFAULT NULL,
-  `continent` VARCHAR(255) DEFAULT NULL,
-  `location` VARCHAR(255) DEFAULT NULL,
-  `date` DATE DEFAULT NULL,
-  `total_cases` FLOAT DEFAULT NULL,
-  `new_cases` INT DEFAULT NULL,
-  `new_cases_smoothed` FLOAT DEFAULT NULL,
-  `total_deaths` FLOAT DEFAULT NULL,
-  `new_deaths` INT DEFAULT NULL,
-  `new_deaths_smoothed` FLOAT DEFAULT NULL,
-  `total_cases_per_million` FLOAT DEFAULT NULL,
-  `new_cases_per_million` INT DEFAULT NULL,
-  `new_cases_smoothed_per_million` FLOAT DEFAULT NULL,
-  `total_deaths_per_million` FLOAT DEFAULT NULL,
-  `new_deaths_per_million` INT DEFAULT NULL,
-  `new_deaths_smoothed_per_million` FLOAT DEFAULT NULL,
-  `reproduction_rate` FLOAT DEFAULT NULL,
-  `icu_patients` FLOAT DEFAULT NULL,
-  `icu_patients_per_million` FLOAT DEFAULT NULL,
-  `hosp_patients` FLOAT DEFAULT NULL,
-  `hosp_patients_per_million` FLOAT DEFAULT NULL,
-  `weekly_icu_admissions` FLOAT DEFAULT NULL,
-  `weekly_icu_admissions_per_million` FLOAT DEFAULT NULL,
-  `weekly_hosp_admissions` FLOAT DEFAULT NULL,
-  `weekly_hosp_admissions_per_million` FLOAT DEFAULT NULL,
-  `total_tests` FLOAT DEFAULT NULL,
-  `new_tests` FLOAT DEFAULT NULL,
-  `total_tests_per_thousand` FLOAT DEFAULT NULL,
-  `new_tests_per_thousand` FLOAT DEFAULT NULL,
-  `new_tests_smoothed` FLOAT DEFAULT NULL,
-  `new_tests_smoothed_per_thousand` FLOAT DEFAULT NULL,
-  `positive_rate` FLOAT DEFAULT NULL,
-  `tests_per_case` FLOAT DEFAULT NULL,
-  `tests_units` VARCHAR(255) DEFAULT NULL,
-  `total_vaccinations` FLOAT DEFAULT NULL,
-  `people_vaccinated` FLOAT DEFAULT NULL,
-  `people_fully_vaccinated` FLOAT DEFAULT NULL,
-  `total_boosters` FLOAT DEFAULT NULL,
-  `new_vaccinations` FLOAT DEFAULT NULL,
-  `new_vaccinations_smoothed` FLOAT DEFAULT NULL,
-  `total_vaccinations_per_hundred` FLOAT DEFAULT NULL,
-  `people_vaccinated_per_hundred` FLOAT DEFAULT NULL,
-  `people_fully_vaccinated_per_hundred` FLOAT DEFAULT NULL,
-  `total_boosters_per_hundred` FLOAT DEFAULT NULL,
-  `new_vaccinations_smoothed_per_million` FLOAT DEFAULT NULL,
-  `new_people_vaccinated_smoothed` FLOAT DEFAULT NULL,
-  `new_people_vaccinated_smoothed_per_hundred` FLOAT DEFAULT NULL,
-  `stringency_index` INT DEFAULT NULL,
-  `population_density` FLOAT DEFAULT NULL,
-  `median_age` FLOAT DEFAULT NULL,
-  `aged_65_older` FLOAT DEFAULT NULL,
-  `aged_70_older` FLOAT DEFAULT NULL,
-  `gdp_per_capita` FLOAT DEFAULT NULL,
-  `extreme_poverty` FLOAT DEFAULT NULL,
-  `cardiovasc_death_rate` FLOAT DEFAULT NULL,
-  `diabetes_prevalence` FLOAT DEFAULT NULL,
-  `female_smokers` FLOAT DEFAULT NULL,
-  `male_smokers` FLOAT DEFAULT NULL,
-  `handwashing_facilities` FLOAT DEFAULT NULL,
-  `hospital_beds_per_thousand` FLOAT DEFAULT NULL,
-  `life_expectancy` FLOAT DEFAULT NULL,
-  `human_development_index` FLOAT DEFAULT NULL,
-  `population` INT DEFAULT NULL,
-  `excess_mortality_cumulative_absolute` FLOAT DEFAULT NULL,
-  `excess_mortality_cumulative` FLOAT DEFAULT NULL,
-  `excess_mortality` FLOAT DEFAULT NULL,
-  `excess_mortality_cumulative_per_million` FLOAT DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-'''
+# create_table = '''
+# CREATE TABLE `covid_data` (
+#   `iso_code` VARCHAR(255) DEFAULT NULL,
+#   `continent` VARCHAR(255) DEFAULT NULL,
+#   `location` VARCHAR(255) DEFAULT NULL,
+#   `date` DATE DEFAULT NULL,
+#   `total_cases` FLOAT DEFAULT NULL,
+#   `new_cases` INT DEFAULT NULL,
+#   `new_cases_smoothed` FLOAT DEFAULT NULL,
+#   `total_deaths` FLOAT DEFAULT NULL,
+#   `new_deaths` INT DEFAULT NULL,
+#   `new_deaths_smoothed` FLOAT DEFAULT NULL,
+#   `total_cases_per_million` FLOAT DEFAULT NULL,
+#   `new_cases_per_million` INT DEFAULT NULL,
+#   `new_cases_smoothed_per_million` FLOAT DEFAULT NULL,
+#   `total_deaths_per_million` FLOAT DEFAULT NULL,
+#   `new_deaths_per_million` INT DEFAULT NULL,
+#   `new_deaths_smoothed_per_million` FLOAT DEFAULT NULL,
+#   `reproduction_rate` FLOAT DEFAULT NULL,
+#   `icu_patients` FLOAT DEFAULT NULL,
+#   `icu_patients_per_million` FLOAT DEFAULT NULL,
+#   `hosp_patients` FLOAT DEFAULT NULL,
+#   `hosp_patients_per_million` FLOAT DEFAULT NULL,
+#   `weekly_icu_admissions` FLOAT DEFAULT NULL,
+#   `weekly_icu_admissions_per_million` FLOAT DEFAULT NULL,
+#   `weekly_hosp_admissions` FLOAT DEFAULT NULL,
+#   `weekly_hosp_admissions_per_million` FLOAT DEFAULT NULL,
+#   `total_tests` FLOAT DEFAULT NULL,
+#   `new_tests` FLOAT DEFAULT NULL,
+#   `total_tests_per_thousand` FLOAT DEFAULT NULL,
+#   `new_tests_per_thousand` FLOAT DEFAULT NULL,
+#   `new_tests_smoothed` FLOAT DEFAULT NULL,
+#   `new_tests_smoothed_per_thousand` FLOAT DEFAULT NULL,
+#   `positive_rate` FLOAT DEFAULT NULL,
+#   `tests_per_case` FLOAT DEFAULT NULL,
+#   `tests_units` VARCHAR(255) DEFAULT NULL,
+#   `total_vaccinations` FLOAT DEFAULT NULL,
+#   `people_vaccinated` FLOAT DEFAULT NULL,
+#   `people_fully_vaccinated` FLOAT DEFAULT NULL,
+#   `total_boosters` FLOAT DEFAULT NULL,
+#   `new_vaccinations` FLOAT DEFAULT NULL,
+#   `new_vaccinations_smoothed` FLOAT DEFAULT NULL,
+#   `total_vaccinations_per_hundred` FLOAT DEFAULT NULL,
+#   `people_vaccinated_per_hundred` FLOAT DEFAULT NULL,
+#   `people_fully_vaccinated_per_hundred` FLOAT DEFAULT NULL,
+#   `total_boosters_per_hundred` FLOAT DEFAULT NULL,
+#   `new_vaccinations_smoothed_per_million` FLOAT DEFAULT NULL,
+#   `new_people_vaccinated_smoothed` FLOAT DEFAULT NULL,
+#   `new_people_vaccinated_smoothed_per_hundred` FLOAT DEFAULT NULL,
+#   `stringency_index` INT DEFAULT NULL,
+#   `population_density` FLOAT DEFAULT NULL,
+#   `median_age` FLOAT DEFAULT NULL,
+#   `aged_65_older` FLOAT DEFAULT NULL,
+#   `aged_70_older` FLOAT DEFAULT NULL,
+#   `gdp_per_capita` FLOAT DEFAULT NULL,
+#   `extreme_poverty` FLOAT DEFAULT NULL,
+#   `cardiovasc_death_rate` FLOAT DEFAULT NULL,
+#   `diabetes_prevalence` FLOAT DEFAULT NULL,
+#   `female_smokers` FLOAT DEFAULT NULL,
+#   `male_smokers` FLOAT DEFAULT NULL,
+#   `handwashing_facilities` FLOAT DEFAULT NULL,
+#   `hospital_beds_per_thousand` FLOAT DEFAULT NULL,
+#   `life_expectancy` FLOAT DEFAULT NULL,
+#   `human_development_index` FLOAT DEFAULT NULL,
+#   `population` INT DEFAULT NULL,
+#   `excess_mortality_cumulative_absolute` FLOAT DEFAULT NULL,
+#   `excess_mortality_cumulative` FLOAT DEFAULT NULL,
+#   `excess_mortality` FLOAT DEFAULT NULL,
+#   `excess_mortality_cumulative_per_million` FLOAT DEFAULT NULL
+# ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+# '''
+
+truncate_table = '''TRUNCATE TABLE covid_data;'''
 
 load_data = '''
 LOAD DATA INFILE 'D:/Study/UNIVERSITY/OTHER COURSES/random coding/Portfolio Projects/Covid Analysis Automation/owid-covid-data.csv'
@@ -144,20 +155,25 @@ IGNORE 1 ROWS;
 '''
 
 try:
-    # Drop existing table if it exists
-    cursor.execute(drop_table)
-    conn.commit()  # Commit table drop
-    print("1")
+    # # Drop existing table if it exists
+    # cursor.execute(drop_table)
+    # conn.commit()  # Commit table drop
+    # print("1")
     
-    # Create the table
-    cursor.execute(create_table)
-    conn.commit()  # Commit table creation
-    print("2")
+    # # Create the table
+    # cursor.execute(create_table)
+    # conn.commit()  # Commit table creation
+    # print("2")
+
+    # Truncate the table
+    cursor.execute(truncate_table)
+    conn.commit()  # Commit table truncation
+    print("1")
 
     # Load data into the table
     cursor.execute(load_data)
     conn.commit()  # Commit data loading
-    print("3")
+    print("2")
 
 except Exception as e:
     print(f"An error occurred: {e}")
