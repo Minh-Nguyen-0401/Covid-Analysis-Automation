@@ -107,3 +107,7 @@ To replicate or run this project:
 ## Contact Information
 
 For questions or further information, please contact me via [Duc Minh (David)](www.linkedin.com/in/duc-minh-ngn)
+
+## LICENSE
+
+This project is licensed under the MIT License - see the LICENSE file for details.
